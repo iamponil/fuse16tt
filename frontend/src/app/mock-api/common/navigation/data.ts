@@ -23,6 +23,13 @@ export const defaultNavigation: FuseNavigationItem[] = [
         icon: 'heroicons_outline:document',
         link: '/admin/user-management',
     },
+    {
+        id: 'blogs',
+        title: 'Blogs',
+        type: 'basic',
+        icon: 'heroicons_outline:article',
+        link: '/blogs',
+    },
 ];
 export const compactNavigation: FuseNavigationItem[] = [
     {
