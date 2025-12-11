@@ -90,8 +90,7 @@ class ArticleService {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('title tags image author createdAt updatedAt')
-      .populate('author', 'name');
+      .select('title tags image author createdAt updatedAt');
 
     const [docs, total] = await Promise.all([
       query.lean().exec(),
@@ -169,9 +168,10 @@ class ArticleService {
     const totalWords = articles.reduce((sum, article) => {
       return sum + (article.content?.split(/\s+/).length || 0);
     }, 0);
-    const averageReadTimeMinutes = articles.length > 0
-      ? Math.round((totalWords / articles.length / 200) * 10) / 10
-      : 0;
+    const averageReadTimeMinutes =
+      articles.length > 0
+        ? Math.round((totalWords / articles.length / 200) * 10) / 10
+        : 0;
 
     return {
       total,
@@ -248,7 +248,7 @@ class ArticleService {
 
   async getTopByComments(limit: number = 10) {
     const Comment = mongoose.model('Comment');
-    
+
     const results = await Comment.aggregate([
       {
         $group: {
