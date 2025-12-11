@@ -27,7 +27,7 @@ export const defaultNavigation: FuseNavigationItem[] = [
         id: 'blogs',
         title: 'Blogs',
         type: 'basic',
-        icon: 'heroicons_outline:article',
+        icon: 'heroicons_outline:newspaper',
         link: '/blogs',
     },
 ];

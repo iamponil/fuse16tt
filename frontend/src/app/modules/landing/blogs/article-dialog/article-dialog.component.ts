@@ -78,7 +78,7 @@ export class ArticleDialogComponent implements OnInit {
                 formData.append('image', this.selectedImageFile);
 
                 const uploadRes: any = await this._http
-                    .post(environment.apiUrl + '/upload', formData)
+                    .post(environment.apiUrl + '/articles/upload', formData)
                     .toPromise();
 
                 imageFinal = uploadRes.filename; // returned by backend

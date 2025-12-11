@@ -2,9 +2,31 @@ import { Application, Request, Response } from 'express';
 import ArticleController from './controllers/ArticleController';
 import CommentController from './controllers/CommentController';
 import { authenticate } from './middlewares/auth';
-import { canEditArticle, requireAdminForDelete, canCreateArticle } from './middlewares/authorize';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs-extra';
+import {
+  canEditArticle,
+  requireAdminForDelete,
+  canCreateArticle,
+} from './middlewares/authorize';
 import { writeLimiter } from './middlewares/rateLimit';
 
+const uploadDir = path.join(__dirname, '../public/uploads'); // Adjust path if needed
+fs.ensureDirSync(uploadDir);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'article-' + uniqueSuffix + ext);
+  },
+});
+
+const upload = multer({ storage: storage });
 class ArticleRoutes {
   constructor(private app: Application) {}
 
@@ -12,6 +34,21 @@ class ArticleRoutes {
     this.app.get('/', (req: Request, res: Response) => {
       res.send({ message: 'Article Service is running' });
     });
+    const uploadDir = path.join(__dirname, '../public/uploads'); // Adjust path if needed
+    fs.ensureDirSync(uploadDir);
+
+    const storage = multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const ext = path.extname(file.originalname);
+        cb(null, 'article-' + uniqueSuffix + ext);
+      },
+    });
+
+    const upload = multer({ storage: storage });
 
     // Article endpoints
     const base = '/api/articles';
@@ -29,6 +66,12 @@ class ArticleRoutes {
       canCreateArticle,
       ArticleController.validators.create,
       ArticleController.create.bind(ArticleController)
+    );
+    this.app.post(
+      `${base}/upload`,
+      // authenticate, // Optional: verify user is logged in to upload
+      upload.single('image'), // Middleware processes the file
+      ArticleController.upload.bind(ArticleController) // Controller returns JSON
     );
 
     // Comment Routes (Nested)
@@ -71,7 +114,7 @@ class ArticleRoutes {
 
     // Dashboard/Statistics endpoints
     const statsBase = '/api/v1/articles';
-    
+
     this.app.get(
       `${statsBase}/summary`,
       authenticate,

@@ -1,4 +1,5 @@
 export const environment = {
-    production: true,
-    apiUrl: 'http://localhost:8000' // Update this to your production API Gateway URL
+    production: false,
+    apiUrl: 'http://localhost:8000',
+    socketUrl: 'http://localhost:2000',
 };

@@ -69,10 +69,28 @@ class Routes {
           }
           // Forward Authorization header (JWT token)
           if (srcReq.headers.authorization) {
-            proxyReqOpts.headers['authorization'] = srcReq.headers.authorization;
+            proxyReqOpts.headers['authorization'] =
+              srcReq.headers.authorization;
           }
           return proxyReqOpts;
         },
+      })
+    );
+    // 7.5️⃣ Proxy /articles/uploads/* to ArticleService (Static Images)
+    // MUST be before the generic /articles route
+    this.app.use(
+      '/articles/uploads',
+      proxy('http://localhost:7000', {
+        proxyReqPathResolver: (req) => {
+          // Input: /articles/uploads/image.jpg
+          // Goal: /uploads/image.jpg (Standard Express static path)
+
+          // Remove '/articles' from the start
+          const path = req.originalUrl.replace(/^\/articles/, '');
+          console.log(`Proxying static image: ${path}`);
+          return path;
+        },
+        preserveHostHdr: true,
       })
     );
 
@@ -95,7 +113,8 @@ class Routes {
           }
           // Forward Authorization header (JWT token)
           if (srcReq.headers.authorization) {
-            proxyReqOpts.headers['authorization'] = srcReq.headers.authorization;
+            proxyReqOpts.headers['authorization'] =
+              srcReq.headers.authorization;
           }
           return proxyReqOpts;
         },
@@ -122,7 +141,8 @@ class Routes {
           }
           // Forward Authorization header (JWT token)
           if (srcReq.headers.authorization) {
-            proxyReqOpts.headers['authorization'] = srcReq.headers.authorization;
+            proxyReqOpts.headers['authorization'] =
+              srcReq.headers.authorization;
           }
           return proxyReqOpts;
         },
@@ -149,7 +169,8 @@ class Routes {
           }
           // Forward Authorization header (JWT token)
           if (srcReq.headers.authorization) {
-            proxyReqOpts.headers['authorization'] = srcReq.headers.authorization;
+            proxyReqOpts.headers['authorization'] =
+              srcReq.headers.authorization;
           }
           return proxyReqOpts;
         },

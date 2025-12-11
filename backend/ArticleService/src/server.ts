@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import mongoose from 'mongoose';
 import Routes from './routes';
+import path from 'path';
 import { createRedisClient } from './services/RedisService';
 
 class ArticleServiceServer {
@@ -19,11 +20,17 @@ class ArticleServiceServer {
 
   private configureMiddleware() {
     const origin = process.env.FRONTEND_ORIGIN || 'http://localhost:4200';
-    this.app.use(helmet());
+    this.app.use(
+      helmet({
+        crossOriginResourcePolicy: { policy: 'cross-origin' },
+      })
+    );
     this.app.use(express.json());
     this.app.use(cors({ origin, credentials: true }));
-    // Note: Rate limiting is now applied per-route instead of globally
-    // to avoid blocking dashboard statistics and read operations
+    this.app.use(
+      '/uploads',
+      express.static(path.join(__dirname, '../public/uploads'))
+    );
   }
 
   private configureRoutes() {
@@ -32,7 +39,8 @@ class ArticleServiceServer {
 
   public async start() {
     // Connect Mongo
-    const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/article-service';
+    const mongoUri =
+      process.env.MONGO_URI || 'mongodb://localhost:27017/article-service';
     try {
       await mongoose.connect(mongoUri);
       console.log('Connected to MongoDB');
@@ -47,7 +55,7 @@ class ArticleServiceServer {
       console.log('Connected to Redis');
     } catch (err) {
       console.error('Redis connection error:', err);
-      // Decide if we want to crash or continue without cache. 
+      // Decide if we want to crash or continue without cache.
       // For now, let's continue but cache specific calls will fail gracefully (caught in Service)
     }
 

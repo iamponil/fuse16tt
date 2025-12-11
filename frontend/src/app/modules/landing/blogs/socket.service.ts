@@ -7,6 +7,12 @@ import { environment } from 'environments/environment';
     providedIn: 'root',
 })
 export class SocketService {
+    leaveArticle(articleId: string): void {
+        if (this.socket) {
+            this.socket.emit('leaveArticle', articleId);
+            console.log(`[Socket] Left article: ${articleId}`);
+        }
+    }
     private socket: Socket;
     private connected = false;
 

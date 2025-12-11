@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms'; // <--- 1. Import this
 import { MatChipsModule } from '@angular/material/chips';
 import { MatInputModule } from '@angular/material/input';
+import { UserService } from 'app/core/user/user.service';
+
 import {
     ArticleService,
     Article,
@@ -36,6 +38,7 @@ import { ArticleDialogComponent } from './article-dialog/article-dialog.componen
 export class ArticleListComponent implements OnInit {
     private articleService = inject(ArticleService);
     private dialog = inject(MatDialog);
+    private userService = inject(UserService);
 
     articles: Article[] = [];
     filteredArticles: Article[] = [];
@@ -47,6 +50,15 @@ export class ArticleListComponent implements OnInit {
     loading = true;
 
     ngOnInit(): void {
+        this.userService.get().subscribe({
+            next: (user) => {
+                this.currentUser = user;
+                console.log('Current user:', user);
+            },
+            error: (err) => {
+                console.error('Failed to load user', err);
+            },
+        });
         this.articleService.getArticles().subscribe((res) => {
             this.articles = res.docs;
             this.filteredArticles = [...this.articles];
@@ -83,9 +95,12 @@ export class ArticleListComponent implements OnInit {
 
     viewArticle(article: Article) {
         this.dialog.open(ArticleDetailsComponent, {
-            width: '900px',
+            width: '90vw', // 90% of screen width
+            maxWidth: '1000px', // But don't get too crazy on huge screens
+            height: '90vh', // 90% of screen height
             data: { articleId: article._id },
             autoFocus: false,
+            panelClass: 'custom-dialog-container', // Optional for extra CSS
         });
     }
 
@@ -126,29 +141,49 @@ export class ArticleListComponent implements OnInit {
         });
     }
     canEdit(article: Article): boolean {
-        if (!this.currentUser) {
-            return false;
-        }
+        // 1. If not logged in, nobody can edit
+        if (!this.currentUser) return false;
+        const userRole = this.currentUser.role; // e.g., "Rédacteur" or "admin"
 
-        // Admin and Éditeur can edit all articles
-        if (
-            this.currentUser.role === 'admin' ||
-            this.currentUser.role === 'editor'
-        ) {
+        // 2. Admins can edit everything
+        if (userRole === 'admin' || userRole === 'Admin') {
             return true;
         }
 
-        // Rédacteur can only edit their own articles
-        if (this.currentUser.role === 'writer') {
-            return article.author === this.currentUser.id;
+        // 3. If article has NO author (is null), only Admin can edit (already returned above)
+        if (!article.author) {
+            return false;
+        }
+        console.log(userRole === 'writer' || userRole == 'Rédacteur', userRole);
+        // 4. Rédacteur (Writer) Logic
+        if (userRole === 'writer' || userRole == 'Rédacteur') {
+            console.log('first');
+            // Get the User's ID safely
+            const currentUserId = this.currentUser._id || this.currentUser.id;
+
+            // Get the Article's Author ID safely
+            let articleAuthorId = article.author;
+            console.log(currentUserId, articleAuthorId);
+            // If author is an object (and not null), extract the _id
+            if (typeof article.author === 'object' && article.author !== null) {
+                articleAuthorId =
+                    (article.author as any)._id || (article.author as any).id;
+            }
+
+            // 5. Compare as Strings (to avoid ObjectId vs String issues)
+            return String(articleAuthorId) === String(currentUserId);
         }
 
         return false;
     }
     canDelete(article: Article): boolean {
-        // Only admin can delete
-        return this.currentUser && this.currentUser.role === 'admin';
+        if (!this.currentUser) return false;
+
+        // Allow Admin OR the author (if you want authors to delete their own)
+        const role = this.currentUser.role;
+        return role === 'admin' || role === 'Admin';
     }
+
     deleteArticle(article: Article): void {
         if (!confirm(`Are you sure you want to delete "${article.title}"?`)) {
             return;
