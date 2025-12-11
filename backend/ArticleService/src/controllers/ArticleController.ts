@@ -119,6 +119,63 @@ class ArticleController {
       return res.status(500).json({ message: 'Server error' });
     }
   }
+
+  // GET /api/v1/articles/summary
+  public async getSummary(req: Request, res: Response) {
+    try {
+      const summary = await ArticleService.getSummary();
+      return res.json(summary);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  // GET /api/v1/articles/count-by-day?days=30
+  public async getCountByDay(req: Request, res: Response) {
+    try {
+      const days = req.query.days ? Number(req.query.days) : 30;
+      const data = await ArticleService.getCountByDay(days);
+      return res.json(data);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  // GET /api/v1/articles/count-by-author
+  public async getCountByAuthor(req: Request, res: Response) {
+    try {
+      const data = await ArticleService.getCountByAuthor();
+      return res.json(data);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  // GET /api/v1/articles/top-by-comments?limit=10
+  public async getTopByComments(req: Request, res: Response) {
+    try {
+      const limit = req.query.limit ? Number(req.query.limit) : 10;
+      const data = await ArticleService.getTopByComments(limit);
+      return res.json(data);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  // GET /api/v1/articles/status-distribution
+  public async getStatusDistribution(req: Request, res: Response) {
+    try {
+      const data = await ArticleService.getStatusDistribution();
+      return res.json(data);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  }
 }
 
 export default new ArticleController();

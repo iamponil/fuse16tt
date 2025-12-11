@@ -69,8 +69,38 @@ class ArticleRoutes {
       ArticleController.delete.bind(ArticleController)
     );
 
-
+    // Dashboard/Statistics endpoints
+    const statsBase = '/api/v1/articles';
     
+    this.app.get(
+      `${statsBase}/summary`,
+      authenticate,
+      ArticleController.getSummary.bind(ArticleController)
+    );
+
+    this.app.get(
+      `${statsBase}/count-by-day`,
+      authenticate,
+      ArticleController.getCountByDay.bind(ArticleController)
+    );
+
+    this.app.get(
+      `${statsBase}/count-by-author`,
+      authenticate,
+      ArticleController.getCountByAuthor.bind(ArticleController)
+    );
+
+    this.app.get(
+      `${statsBase}/top-by-comments`,
+      authenticate,
+      ArticleController.getTopByComments.bind(ArticleController)
+    );
+
+    this.app.get(
+      `${statsBase}/status-distribution`,
+      authenticate,
+      ArticleController.getStatusDistribution.bind(ArticleController)
+    );
   }
 
   public init() {

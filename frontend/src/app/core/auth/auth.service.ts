@@ -2,13 +2,15 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { AuthUtils } from 'app/core/auth/auth.utils';
 import { UserService } from 'app/core/user/user.service';
-import { catchError, Observable, of, switchMap, throwError } from 'rxjs';
+import { catchError, Observable, of, switchMap, throwError, tap, finalize, shareReplay } from 'rxjs';
+import { environment } from 'environments/environment';
 
 @Injectable({providedIn: 'root'})
 export class AuthService
 {
     private _authenticated: boolean = false;
-    private readonly _apiUrl = 'http://localhost:8000';
+    private readonly _apiUrl = environment.apiUrl;
+    private _refreshTokenInProgress: Observable<any> | null = null;
 
     /**
      * Constructor
@@ -64,7 +66,7 @@ export class AuthService
         // Throw error, if the user is already logged in
         if ( this._authenticated )
         {
-            return throwError('User is already logged in.');
+            return throwError(() => new Error('User is already logged in.'));
         }
 
         return this._httpClient.post(`${this._apiUrl}/auth/login`, credentials, {
@@ -92,19 +94,27 @@ export class AuthService
 
     /**
      * Refresh access token using refresh token from cookie
+     * Handles concurrent refresh attempts by sharing a single refresh request
      */
     refreshToken(): Observable<any>
     {
+        // If refresh is already in progress, return the existing observable
+        if (this._refreshTokenInProgress)
+        {
+            return this._refreshTokenInProgress;
+        }
+
         const userId = this.userId;
         if (!userId)
         {
-            return throwError('No user ID available for token refresh');
+            return throwError(() => new Error('No user ID available for token refresh'));
         }
 
-        return this._httpClient.post(`${this._apiUrl}/auth/refresh`, { userId }, {
+        // Create and store the refresh observable
+        this._refreshTokenInProgress = this._httpClient.post(`${this._apiUrl}/auth/refresh`, { userId }, {
             withCredentials: true // Important for cookies
         }).pipe(
-            switchMap((response: any) =>
+            tap((response: any) =>
             {
                 // Store the new access token
                 if (response.accessToken)
@@ -112,19 +122,30 @@ export class AuthService
                     this.accessToken = response.accessToken;
                 }
 
+                // Update user data if provided in refresh response
+                if (response.user)
+                {
+                    this._userService.user = response.user;
+                }
+
                 // Set the authenticated flag to true
                 this._authenticated = true;
-
-                // Return the response
-                return of(response);
             }),
             catchError((error) =>
             {
                 // If refresh fails, sign out the user
                 this.signOut().subscribe();
-                return throwError(error);
-            })
+                return throwError(() => error);
+            }),
+            finalize(() =>
+            {
+                // Clear the refresh in progress flag
+                this._refreshTokenInProgress = null;
+            }),
+            shareReplay(1) // Share the result with all subscribers
         );
+
+        return this._refreshTokenInProgress;
     }
 
     /**

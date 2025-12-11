@@ -1,5 +1,5 @@
 import { CurrencyPipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatRippleModule } from '@angular/material/core';
@@ -23,14 +23,14 @@ import { Subject, takeUntil } from 'rxjs';
 })
 export class ProjectComponent implements OnInit, OnDestroy
 {
-    chartGithubIssues: ApexOptions = {};
-    chartTaskDistribution: ApexOptions = {};
+    chartArticleActivity: ApexOptions = {};
+    chartArticleStatusDistribution: ApexOptions = {};
     chartBudgetDistribution: ApexOptions = {};
     chartWeeklyExpenses: ApexOptions = {};
     chartMonthlyExpenses: ApexOptions = {};
     chartYearlyExpenses: ApexOptions = {};
     data: any;
-    selectedProject: string = 'ACME Corp. Backend App';
+    selectedProject: string = 'Content Management Dashboard';
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
     /**
@@ -39,6 +39,7 @@ export class ProjectComponent implements OnInit, OnDestroy
     constructor(
         private _projectService: ProjectService,
         private _router: Router,
+        private _changeDetectorRef: ChangeDetectorRef,
     )
     {
     }
@@ -52,17 +53,18 @@ export class ProjectComponent implements OnInit, OnDestroy
      */
     ngOnInit(): void
     {
-        // Get the data
-        this._projectService.data$
-            .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe((data) =>
-            {
-                // Store the data
-                this.data = data;
+        // Check authentication status
+        const accessToken = localStorage.getItem('accessToken');
+        const userId = localStorage.getItem('userId');
+        console.log('🔐 Authentication Status:', {
+            hasAccessToken: !!accessToken,
+            tokenLength: accessToken?.length || 0,
+            hasUserId: !!userId,
+            userId: userId
+        });
 
-                // Prepare the chart data
-                this._prepareChartData();
-            });
+        // Load dashboard data
+        this.loadDashboardData();
 
         // Attach SVG fill fixer to all ApexCharts
         window['Apex'] = {
@@ -106,9 +108,137 @@ export class ProjectComponent implements OnInit, OnDestroy
         return item.id || index;
     }
 
+    /**
+     * Load dashboard data from backend
+     */
+    loadDashboardData(): void
+    {
+        console.log('🔄 Loading dashboard data...');
+        
+        // Try to get real data from backend, fall back to mock data
+        this._projectService.getDashboardData()
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe({
+                next: (data) =>
+                {
+                    console.log('✅ Successfully loaded dashboard data:', data);
+                    
+                    // Store the data
+                    this.data = data;
+
+                    // Prepare the chart data
+                    this._prepareChartData();
+                    
+                    // Mark for check since we're using OnPush
+                    this._changeDetectorRef.markForCheck();
+                    
+                    console.log('✅ Dashboard data set and charts prepared. Data:', this.data);
+                },
+                error: (err) =>
+                {
+                    console.error('❌ Failed to load real dashboard data:', err);
+                    console.error('Error details:', {
+                        status: err.status,
+                        statusText: err.statusText,
+                        message: err.message,
+                        url: err.url
+                    });
+                    
+                    // Fallback to mock data
+                    this._projectService.getData()
+                        .pipe(takeUntil(this._unsubscribeAll))
+                        .subscribe({
+                            next: (data) =>
+                            {
+                                console.log('✅ Loaded mock data as fallback:', data);
+                                this.data = data;
+                                this._prepareChartData();
+                                this._changeDetectorRef.markForCheck();
+                            },
+                            error: (mockErr) =>
+                            {
+                                console.error('❌ Failed to load mock data as well:', mockErr);
+                                // Set default empty data to prevent crashes
+                                this.data = this._getDefaultEmptyData();
+                                this._prepareChartData();
+                                this._changeDetectorRef.markForCheck();
+                                console.log('⚠️ Using default empty data');
+                            }
+                        });
+                },
+            });
+    }
+
+    /**
+     * Refresh dashboard data
+     */
+    refreshData(): void
+    {
+        console.log('Refreshing dashboard data...');
+        this.loadDashboardData();
+    }
+
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
+
+    /**
+     * Get default empty data structure to prevent crashes
+     * @private
+     */
+    private _getDefaultEmptyData(): any
+    {
+        return {
+            articleActivity: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                series: {
+                    'this-week': [
+                        { name: 'Articles Created', type: 'line', data: [0, 0, 0, 0, 0, 0, 0] },
+                        { name: 'Daily Count', type: 'column', data: [0, 0, 0, 0, 0, 0, 0] }
+                    ],
+                    'last-week': [
+                        { name: 'Articles Created', type: 'line', data: [0, 0, 0, 0, 0, 0, 0] },
+                        { name: 'Daily Count', type: 'column', data: [0, 0, 0, 0, 0, 0, 0] }
+                    ]
+                },
+                overview: {
+                    'this-week': { 'total-articles': 0, 'published': 0, 'drafts': 0, 'new-users': 0 },
+                    'last-week': { 'total-articles': 0, 'published': 0, 'drafts': 0, 'new-users': 0 }
+                }
+            },
+            articleStatusDistribution: {
+                labels: ['Draft', 'Published'],
+                series: {
+                    'this-week': [0, 0],
+                    'last-week': [0, 0]
+                },
+                overview: {
+                    'this-week': { 'drafts': 0, 'published': 0 },
+                    'last-week': { 'drafts': 0, 'published': 0 }
+                }
+            },
+            topArticles: {
+                top5: [],
+                next5: []
+            },
+            rawData: {
+                articles: {
+                    summary: { total: 0, published: 0, drafts: 0, averageReadTimeMinutes: 0 },
+                    countByDay: { days: [], counts: [] },
+                    countByAuthor: [],
+                    topByComments: [],
+                    statusDistribution: []
+                },
+                users: {
+                    summary: { total: 0, activeLast30Days: 0, newLast30Days: 0 },
+                    signupsByDay: { days: [], counts: [] },
+                    byRole: [],
+                    activePerHour: { hours: [], counts: [] },
+                    topContributors: []
+                }
+            }
+        };
+    }
 
     /**
      * Fix the SVG fill references. This fix must be applied to all ApexCharts
@@ -144,8 +274,33 @@ export class ProjectComponent implements OnInit, OnDestroy
      */
     private _prepareChartData(): void
     {
-        // Github issues
-        this.chartGithubIssues = {
+        // Check if data is available
+        if (!this.data) {
+            console.warn('No data available for charts');
+            return;
+        }
+
+        // Ensure series data exists before creating charts
+        if (!this.data.articleActivity?.series) {
+            console.warn('Article activity series data is missing');
+            this.data.articleActivity = this.data.articleActivity || {};
+            this.data.articleActivity.series = {
+                'this-week': [],
+                'last-week': []
+            };
+        }
+
+        if (!this.data.articleStatusDistribution?.series) {
+            console.warn('Article status distribution series data is missing');
+            this.data.articleStatusDistribution = this.data.articleStatusDistribution || {};
+            this.data.articleStatusDistribution.series = {
+                'this-week': [],
+                'last-week': []
+            };
+        }
+
+        // Article activity chart
+        this.chartArticleActivity = {
             chart      : {
                 fontFamily: 'inherit',
                 foreColor : 'inherit',
@@ -158,7 +313,7 @@ export class ProjectComponent implements OnInit, OnDestroy
                     enabled: false,
                 },
             },
-            colors     : ['#64748B', '#94A3B8'],
+            colors     : ['#3B82F6', '#93C5FD'],
             dataLabels : {
                 enabled        : true,
                 enabledOnSeries: [0],
@@ -169,7 +324,7 @@ export class ProjectComponent implements OnInit, OnDestroy
             grid       : {
                 borderColor: 'var(--fuse-border)',
             },
-            labels     : this.data.githubIssues.labels,
+            labels     : this.data.articleActivity?.labels || [],
             legend     : {
                 show: false,
             },
@@ -178,7 +333,7 @@ export class ProjectComponent implements OnInit, OnDestroy
                     columnWidth: '50%',
                 },
             },
-            series     : this.data.githubIssues.series,
+            series     : this.data.articleActivity?.series || {},
             states     : {
                 hover: {
                     filter: {
@@ -220,8 +375,16 @@ export class ProjectComponent implements OnInit, OnDestroy
             },
         };
 
-        // Task distribution
-        this.chartTaskDistribution = {
+        // Article status distribution
+        console.log('Setting up Article Status Distribution chart');
+        console.log('Data structure:', this.data);
+        console.log('articleStatusDistribution:', this.data?.articleStatusDistribution);
+        console.log('labels:', this.data?.articleStatusDistribution?.labels);
+        console.log('series:', this.data?.articleStatusDistribution?.series);
+        console.log('series this-week:', this.data?.articleStatusDistribution?.series?.['this-week']);
+        console.log('series last-week:', this.data?.articleStatusDistribution?.series?.['last-week']);
+        
+        this.chartArticleStatusDistribution = {
             chart      : {
                 fontFamily: 'inherit',
                 foreColor : 'inherit',
@@ -234,7 +397,21 @@ export class ProjectComponent implements OnInit, OnDestroy
                     enabled: false,
                 },
             },
-            labels     : this.data.taskDistribution.labels,
+            colors     : ['#3B82F6', '#F59E0B', '#6B7280'], // Blue for published, Amber for draft, Gray for archived
+            dataLabels : {
+                enabled: true,
+                formatter: (val): string => {
+                    if (typeof val === 'number') {
+                        return Math.round(val).toString();
+                    }
+                    return val?.toString() || '0';
+                },
+            },
+            fill       : {
+                opacity: 0.85,
+                colors: ['#3B82F6', '#F59E0B', '#6B7280'],
+            },
+            labels     : this.data?.articleStatusDistribution?.labels || [],
             legend     : {
                 position: 'bottom',
             },
@@ -248,7 +425,7 @@ export class ProjectComponent implements OnInit, OnDestroy
                     },
                 },
             },
-            series     : this.data.taskDistribution.series,
+            series     : this.data?.articleStatusDistribution?.series || { 'this-week': [], 'last-week': [] },
             states     : {
                 hover: {
                     filter: {
@@ -260,26 +437,26 @@ export class ProjectComponent implements OnInit, OnDestroy
             stroke     : {
                 width: 2,
             },
-            theme      : {
-                monochrome: {
-                    enabled       : true,
-                    color         : '#93C5FD',
-                    shadeIntensity: 0.75,
-                    shadeTo       : 'dark',
-                },
-            },
             tooltip    : {
                 followCursor: true,
                 theme       : 'dark',
+                y: {
+                    formatter: (val): string => val ? val.toFixed(0) : '0',
+                },
             },
             yaxis      : {
+                show: true,
                 labels: {
+                    show: true,
+                    formatter: (val): string => val ? Math.round(val).toString() : '0',
                     style: {
                         colors: 'var(--fuse-text-secondary)',
                     },
                 },
             },
         };
+        
+        console.log('Chart config series:', this.chartArticleStatusDistribution.series);
 
         // Budget distribution
         this.chartBudgetDistribution = {
@@ -319,7 +496,7 @@ export class ProjectComponent implements OnInit, OnDestroy
                     },
                 },
             },
-            series     : this.data.budgetDistribution.series,
+            series     : this.data.budgetDistribution?.series || [],
             stroke     : {
                 width: 2,
             },
@@ -337,7 +514,7 @@ export class ProjectComponent implements OnInit, OnDestroy
                         fontWeight: '500',
                     },
                 },
-                categories: this.data.budgetDistribution.categories,
+                categories: this.data.budgetDistribution?.categories || [],
             },
             yaxis      : {
                 max       : (max: number): number => parseInt((max + 10).toFixed(0), 10),
@@ -360,7 +537,7 @@ export class ProjectComponent implements OnInit, OnDestroy
                 },
             },
             colors : ['#22D3EE'],
-            series : this.data.weeklyExpenses.series,
+            series : this.data.weeklyExpenses?.series || [],
             stroke : {
                 curve: 'smooth',
             },
@@ -369,7 +546,7 @@ export class ProjectComponent implements OnInit, OnDestroy
             },
             xaxis  : {
                 type      : 'category',
-                categories: this.data.weeklyExpenses.labels,
+                categories: this.data.weeklyExpenses?.labels || [],
             },
             yaxis  : {
                 labels: {
@@ -393,7 +570,7 @@ export class ProjectComponent implements OnInit, OnDestroy
                 },
             },
             colors : ['#4ADE80'],
-            series : this.data.monthlyExpenses.series,
+            series : this.data.monthlyExpenses?.series || [],
             stroke : {
                 curve: 'smooth',
             },
@@ -402,7 +579,7 @@ export class ProjectComponent implements OnInit, OnDestroy
             },
             xaxis  : {
                 type      : 'category',
-                categories: this.data.monthlyExpenses.labels,
+                categories: this.data.monthlyExpenses?.labels || [],
             },
             yaxis  : {
                 labels: {
@@ -426,7 +603,7 @@ export class ProjectComponent implements OnInit, OnDestroy
                 },
             },
             colors : ['#FB7185'],
-            series : this.data.yearlyExpenses.series,
+            series : this.data.yearlyExpenses?.series || [],
             stroke : {
                 curve: 'smooth',
             },
@@ -435,7 +612,7 @@ export class ProjectComponent implements OnInit, OnDestroy
             },
             xaxis  : {
                 type      : 'category',
-                categories: this.data.yearlyExpenses.labels,
+                categories: this.data.yearlyExpenses?.labels || [],
             },
             yaxis  : {
                 labels: {

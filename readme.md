@@ -18,6 +18,7 @@ A full-stack article management platform built with Angular and Node.js microser
 - **User Management**: Complete authentication and authorization system with role-based access control (Admin/User)
 - **Article Management**: Create, read, update, and delete articles with rich text editing
 - **Real-time Notifications**: Socket.io-powered real-time notifications and comments
+- **Dashboard Analytics**: Comprehensive statistics dashboard with charts and metrics
 - **Microservices Architecture**: Scalable backend with dedicated services for different domains
 - **API Gateway**: Centralized routing and request handling
 - **Caching Layer**: Redis integration for improved performance
@@ -32,9 +33,9 @@ A full-stack article management platform built with Angular and Node.js microser
 - **Template**: Fuse Angular Starter
 - **Rich Text Editor**: Quill (ngx-quill)
 - **Real-time**: Socket.io Client
+- **Charts**: ng-apexcharts (ApexCharts)
 - **Styling**: TailwindCSS + Custom CSS
 - **State Management**: RxJS
-- **Note**: Dashboard charts (ng-apexcharts) temporarily disabled due to Angular 16 compatibility issues
 
 ### Backend
 
@@ -334,6 +335,130 @@ USER_SERVICE_URL=http://localhost:4000
 ARTICLE_SERVICE_URL=http://localhost:7000
 NOTIFICATION_SERVICE_URL=http://localhost:2000
 ```
+
+## 📊 Dashboard Statistics (NEW)
+
+The platform now includes a comprehensive analytics dashboard with real-time metrics and visualizations.
+
+### Features
+
+- **Article Analytics**
+  - Total articles, published, and drafts count
+  - Articles created over time (line chart)
+  - Articles by author distribution
+  - Top articles by engagement
+  - Status distribution (polar area chart)
+
+- **User Analytics**
+  - Total users and active users (30 days)
+  - New user signups tracking
+  - User signups by day (time-series)
+  - Users by role distribution
+  - Active users per hour (24h)
+  - Top contributors ranking
+
+### API Endpoints
+
+#### ArticleService
+```
+GET /api/v1/articles/summary
+GET /api/v1/articles/count-by-day?days=30
+GET /api/v1/articles/count-by-author
+GET /api/v1/articles/top-by-comments?limit=10
+GET /api/v1/articles/status-distribution
+```
+
+#### UserService
+```
+GET /api/v1/users/summary
+GET /api/v1/users/signups-by-day?days=30
+GET /api/v1/users/by-role
+GET /api/v1/users/active-per-hour?hours=24
+GET /api/v1/users/top-contributors?limit=10
+```
+
+### Documentation
+
+For detailed documentation on the dashboard implementation:
+
+- **[Dashboard Implementation Guide](./DASHBOARD_IMPLEMENTATION.md)** - Complete technical documentation
+- **[API Examples](./API_EXAMPLES.md)** - Sample requests and responses
+- **[Setup Guide](./DASHBOARD_SETUP_GUIDE.md)** - Quick setup and troubleshooting
+- **[Implementation Summary](./IMPLEMENTATION_SUMMARY.md)** - Overview and status
+
+### Quick Start
+
+1. Ensure all backend services are running
+2. Navigate to the dashboard: `http://localhost:4200/dashboards/project`
+3. View real-time statistics and charts
+
+The dashboard automatically fetches data from both ArticleService and UserService, displaying comprehensive analytics with interactive charts.
+
+## 🧪 API Testing with Postman
+
+A comprehensive Postman collection is included for testing all API endpoints with automatic authentication handling.
+
+### Features
+
+- ✅ **40+ API endpoints** organized in folders
+- ✅ **Automatic token management** - login once, use everywhere
+- ✅ **Auto-refresh tokens** - never manually refresh expired tokens
+- ✅ **Pre-configured environment** - ready to import and use
+- ✅ **Test scripts** - automatic response validation
+- ✅ **CLI test runner** - for automation and CI/CD
+
+### Quick Start
+
+1. **Import to Postman**:
+   - Import `Fuse16tt_API_Collection.postman_collection.json`
+   - Import `Fuse16tt_Environment.postman_environment.json`
+   - Select "Fuse16tt Local Environment" (top-right)
+
+2. **First Test** (30 seconds):
+   - Open **Authentication** → **Register User** → Send
+   - Open **Users** → **Get Current User** → Send
+   - ✅ Token automatically attached!
+
+3. **Run from CLI**:
+   ```bash
+   # Install Newman (once)
+   npm install -g newman newman-reporter-htmlextra
+   
+   # Run tests
+   ./run-api-tests.sh
+   ```
+
+### Documentation
+
+- **[Quick Start Guide](./POSTMAN_QUICK_START.md)** - Get started in 60 seconds
+- **[Complete Guide](./POSTMAN_GUIDE.md)** - Full documentation with troubleshooting
+- **[Test Scenarios](./POSTMAN_TEST_SCENARIOS.md)** - 30+ test scenarios with expected results
+- **[Collection Overview](./POSTMAN_COLLECTION_README.md)** - Package details and features
+
+### What's Included
+
+**Files**:
+- `Fuse16tt_API_Collection.postman_collection.json` - Main collection
+- `Fuse16tt_Environment.postman_environment.json` - Environment variables
+- `run-api-tests.sh` - Automated test runner script
+
+**API Coverage**:
+- Authentication (Register, Login, Refresh, Logout)
+- User Management (Get user, List users, Update roles)
+- User Statistics (5 dashboard endpoints)
+- Article Management (CRUD operations)
+- Article Statistics (5 dashboard endpoints)
+- Comments (Create, List)
+
+**Smart Features**:
+- Auto-save access tokens after login
+- Auto-refresh tokens before expiry
+- Auto-attach Bearer tokens to requests
+- Auto-save resource IDs (userId, articleId, etc.)
+- Built-in test validation
+- Rate limit handling
+
+See the [Quick Start Guide](./POSTMAN_QUICK_START.md) to begin testing immediately!
 
 ## 📝 License
 

@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { getRedisClient } from './RedisService';
@@ -12,9 +12,17 @@ const COOKIE_NAME = process.env.REFRESH_TOKEN_COOKIE_NAME || 'refreshToken';
 
 // Create JWT access token
 export const createAccessToken = (payload: object) => {
-  return jwt.sign(payload as JWTPayload, process.env.JWT_ACCESS_SECRET!, {
-    expiresIn: '2m',
-  });
+  const secret = process.env.JWT_ACCESS_SECRET;
+
+  if (!secret) {
+    throw new Error('JWT_ACCESS_SECRET is not defined');
+  }
+
+  const expiresIn = process.env.JWT_ACCESS_EXPIRES || '15m';
+  
+  return jwt.sign(payload as JWTPayload, secret, {
+    expiresIn,
+  } as SignOptions);
 };
 
 // Create opaque refresh token (random) and store hashed in Redis (keyed by userId)

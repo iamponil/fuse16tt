@@ -53,4 +53,20 @@ router.patch(
   UserController.updateRole
 );
 
+// ----------------- DASHBOARD STATISTICS -----------------
+// User summary
+router.get('/api/v1/users/summary', authenticate, UserController.getSummary);
+
+// Signups by day
+router.get('/api/v1/users/signups-by-day', authenticate, UserController.getSignupsByDay);
+
+// Users by role
+router.get('/api/v1/users/by-role', authenticate, UserController.getUsersByRole);
+
+// Active users per hour
+router.get('/api/v1/users/active-per-hour', authenticate, UserController.getActivePerHour);
+
+// Top contributors
+router.get('/api/v1/users/top-contributors', authenticate, UserController.getTopContributors);
+
 export default router;

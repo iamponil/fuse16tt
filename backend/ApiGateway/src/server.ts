@@ -1,6 +1,7 @@
 import express, { Application } from 'express';
 import http from 'http';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import Routes from './routes';
 
 class ServerClass {
@@ -17,6 +18,9 @@ class ServerClass {
   private configureMiddleware() {
     const origin = process.env.FRONTEND_ORIGIN || 'http://localhost:4200';
     this.app.use(cors({ origin, credentials: true }));
+
+    // Parse cookies for all requests (important for refresh tokens)
+    this.app.use(cookieParser());
 
     // Parse JSON bodies for all requests
     this.app.use(express.json());

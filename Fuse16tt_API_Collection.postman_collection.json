@@ -1,0 +1,899 @@
+{
+	"info": {
+		"_postman_id": "fuse16tt-api-collection",
+		"name": "Fuse16tt API Collection",
+		"description": "Complete API collection for Fuse16tt microservices with automatic authentication handling",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global pre-request script - runs before every request",
+					"// Automatically refresh token if expired",
+					"",
+					"const accessToken = pm.environment.get('accessToken');",
+					"const refreshToken = pm.environment.get('refreshToken');",
+					"const tokenExpiry = pm.environment.get('tokenExpiry');",
+					"",
+					"// Check if token is expired or about to expire (within 1 minute)",
+					"if (tokenExpiry && Date.now() >= tokenExpiry - 60000) {",
+					"    console.log('Token expired or expiring soon, refreshing...');",
+					"    ",
+					"    if (refreshToken) {",
+					"        pm.sendRequest({",
+					"            url: pm.environment.get('baseUrl') + '/auth/refresh',",
+					"            method: 'POST',",
+					"            header: {",
+					"                'Content-Type': 'application/json'",
+					"            },",
+					"            body: {",
+					"                mode: 'raw',",
+					"                raw: JSON.stringify({",
+					"                    refreshToken: refreshToken",
+					"                })",
+					"            }",
+					"        }, function (err, response) {",
+					"            if (err) {",
+					"                console.log('Error refreshing token:', err);",
+					"            } else {",
+					"                const jsonData = response.json();",
+					"                if (jsonData.accessToken) {",
+					"                    pm.environment.set('accessToken', jsonData.accessToken);",
+					"                    // Set expiry to 14 minutes from now (tokens usually expire in 15 min)",
+					"                    pm.environment.set('tokenExpiry', Date.now() + (14 * 60 * 1000));",
+					"                    console.log('Token refreshed successfully');",
+					"                }",
+					"            }",
+					"        });",
+					"    }",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script - runs after every request",
+					"",
+					"// Log response for debugging",
+					"console.log('Status:', pm.response.code);",
+					"console.log('Response:', pm.response.text());"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Save tokens after successful registration",
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    ",
+									"    if (jsonData.accessToken) {",
+									"        pm.environment.set('accessToken', jsonData.accessToken);",
+									"        pm.environment.set('tokenExpiry', Date.now() + (14 * 60 * 1000));",
+									"        console.log('Access token saved');",
+									"    }",
+									"    ",
+									"    if (jsonData.refreshToken) {",
+									"        pm.environment.set('refreshToken', jsonData.refreshToken);",
+									"        console.log('Refresh token saved');",
+									"    }",
+									"    ",
+									"    if (jsonData.user && jsonData.user.id) {",
+									"        pm.environment.set('userId', jsonData.user.id);",
+									"        console.log('User ID saved:', jsonData.user.id);",
+									"    }",
+									"    ",
+									"    pm.test('Registration successful', function () {",
+									"        pm.response.to.have.status(201);",
+									"    });",
+									"} else {",
+									"    pm.test('Registration failed', function () {",
+									"        pm.expect(pm.response.code).to.not.equal(201);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"securePassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "Register a new user account. Returns access token and refresh token."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Save tokens after successful login",
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    ",
+									"    if (jsonData.accessToken) {",
+									"        pm.environment.set('accessToken', jsonData.accessToken);",
+									"        pm.environment.set('tokenExpiry', Date.now() + (14 * 60 * 1000));",
+									"        console.log('Access token saved');",
+									"    }",
+									"    ",
+									"    if (jsonData.refreshToken) {",
+									"        pm.environment.set('refreshToken', jsonData.refreshToken);",
+									"        console.log('Refresh token saved');",
+									"    }",
+									"    ",
+									"    if (jsonData.user && jsonData.user.id) {",
+									"        pm.environment.set('userId', jsonData.user.id);",
+									"        console.log('User ID saved:', jsonData.user.id);",
+									"    }",
+									"    ",
+									"    pm.test('Login successful', function () {",
+									"        pm.response.to.have.status(200);",
+									"        pm.expect(jsonData).to.have.property('accessToken');",
+									"        pm.expect(jsonData).to.have.property('refreshToken');",
+									"    });",
+									"} else {",
+									"    pm.test('Login failed', function () {",
+									"        pm.expect(pm.response.code).to.not.equal(200);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"securePassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Login with email and password. Returns access token and refresh token."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Save new access token",
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    ",
+									"    if (jsonData.accessToken) {",
+									"        pm.environment.set('accessToken', jsonData.accessToken);",
+									"        pm.environment.set('tokenExpiry', Date.now() + (14 * 60 * 1000));",
+									"        console.log('New access token saved');",
+									"    }",
+									"    ",
+									"    pm.test('Token refresh successful', function () {",
+									"        pm.response.to.have.status(200);",
+									"        pm.expect(jsonData).to.have.property('accessToken');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "refresh"]
+						},
+						"description": "Refresh access token using refresh token."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Clear tokens after logout",
+									"if (pm.response.code === 200) {",
+									"    pm.environment.unset('accessToken');",
+									"    pm.environment.unset('refreshToken');",
+									"    pm.environment.unset('tokenExpiry');",
+									"    console.log('Tokens cleared');",
+									"    ",
+									"    pm.test('Logout successful', function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "logout"]
+						},
+						"description": "Logout user and invalidate refresh token."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for user registration, login, token refresh, and logout."
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get Current User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has user data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('email');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "me"]
+						},
+						"description": "Get current authenticated user's information."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is an array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["users"]
+						},
+						"description": "Get all users (Admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Role (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"Éditeur\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/:userId/role",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", ":userId", "role"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "{{userId}}",
+									"description": "User ID to update"
+								}
+							]
+						},
+						"description": "Update user role (Admin only). Roles: Admin, Éditeur, Rédacteur, Lecteur"
+					},
+					"response": []
+				}
+			],
+			"description": "User management endpoints."
+		},
+		{
+			"name": "Users - Dashboard Stats",
+			"item": [
+				{
+					"name": "Get User Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users/summary",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "users", "summary"]
+						},
+						"description": "Get user statistics summary."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Signups by Day",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users/signups-by-day",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "users", "signups-by-day"]
+						},
+						"description": "Get user signups grouped by day."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users by Role",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users/by-role",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "users", "by-role"]
+						},
+						"description": "Get user count grouped by role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Users per Hour",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users/active-per-hour",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "users", "active-per-hour"]
+						},
+						"description": "Get active users per hour."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Top Contributors",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/users/top-contributors",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "users", "top-contributors"]
+						},
+						"description": "Get top contributing users."
+					},
+					"response": []
+				}
+			],
+			"description": "Dashboard statistics endpoints for users."
+		},
+		{
+			"name": "Articles",
+			"item": [
+				{
+					"name": "List Articles",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has articles', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('articles');",
+									"    pm.expect(jsonData.articles).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/articles?page=1&limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["articles"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "published",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get list of articles with pagination."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Article",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    ",
+									"    if (jsonData.id) {",
+									"        pm.environment.set('articleId', jsonData.id);",
+									"        console.log('Article ID saved:', jsonData.id);",
+									"    }",
+									"    ",
+									"    pm.test('Article created successfully', function () {",
+									"        pm.response.to.have.status(201);",
+									"        pm.expect(jsonData).to.have.property('id');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"My New Article\",\n  \"content\": \"This is the content of my new article. It contains important information.\",\n  \"status\": \"draft\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/articles",
+							"host": ["{{baseUrl}}"],
+							"path": ["articles"]
+						},
+						"description": "Create a new article. Requires Éditeur or Rédacteur role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Article by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Article has required fields', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('title');",
+									"    pm.expect(jsonData).to.have.property('content');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/articles/:articleId",
+							"host": ["{{baseUrl}}"],
+							"path": ["articles", ":articleId"],
+							"variable": [
+								{
+									"key": "articleId",
+									"value": "{{articleId}}",
+									"description": "Article ID"
+								}
+							]
+						},
+						"description": "Get a specific article by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Article",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Article Title\",\n  \"content\": \"Updated content for the article.\",\n  \"status\": \"published\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/articles/:articleId",
+							"host": ["{{baseUrl}}"],
+							"path": ["articles", ":articleId"],
+							"variable": [
+								{
+									"key": "articleId",
+									"value": "{{articleId}}",
+									"description": "Article ID"
+								}
+							]
+						},
+						"description": "Update an article. Must be author or admin."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Article (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 204', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/articles/:articleId",
+							"host": ["{{baseUrl}}"],
+							"path": ["articles", ":articleId"],
+							"variable": [
+								{
+									"key": "articleId",
+									"value": "{{articleId}}",
+									"description": "Article ID"
+								}
+							]
+						},
+						"description": "Delete an article. Admin only."
+					},
+					"response": []
+				}
+			],
+			"description": "Article CRUD operations."
+		},
+		{
+			"name": "Articles - Dashboard Stats",
+			"item": [
+				{
+					"name": "Get Article Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/articles/summary",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "articles", "summary"]
+						},
+						"description": "Get article statistics summary."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Articles Count by Day",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/articles/count-by-day",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "articles", "count-by-day"]
+						},
+						"description": "Get article count grouped by day."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Articles Count by Author",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/articles/count-by-author",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "articles", "count-by-author"]
+						},
+						"description": "Get article count grouped by author."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Top Articles by Comments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/articles/top-by-comments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "articles", "top-by-comments"]
+						},
+						"description": "Get articles with most comments."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Article Status Distribution",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/articles/status-distribution",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "articles", "status-distribution"]
+						},
+						"description": "Get article count grouped by status."
+					},
+					"response": []
+				}
+			],
+			"description": "Dashboard statistics endpoints for articles."
+		},
+		{
+			"name": "Comments",
+			"item": [
+				{
+					"name": "Create Comment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    ",
+									"    if (jsonData.id) {",
+									"        pm.environment.set('commentId', jsonData.id);",
+									"        console.log('Comment ID saved:', jsonData.id);",
+									"    }",
+									"    ",
+									"    pm.test('Comment created successfully', function () {",
+									"        pm.response.to.have.status(201);",
+									"        pm.expect(jsonData).to.have.property('id');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"This is a great article! Thanks for sharing.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/articles/:articleId/comments",
+							"host": ["{{baseUrl}}"],
+							"path": ["articles", ":articleId", "comments"],
+							"variable": [
+								{
+									"key": "articleId",
+									"value": "{{articleId}}",
+									"description": "Article ID"
+								}
+							]
+						},
+						"description": "Create a comment on an article."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Article Comments",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is an array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/articles/:articleId/comments",
+							"host": ["{{baseUrl}}"],
+							"path": ["articles", ":articleId", "comments"],
+							"variable": [
+								{
+									"key": "articleId",
+									"value": "{{articleId}}",
+									"description": "Article ID"
+								}
+							]
+						},
+						"description": "Get all comments for an article."
+					},
+					"response": []
+				}
+			],
+			"description": "Comment operations for articles."
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}

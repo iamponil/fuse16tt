@@ -5,7 +5,6 @@ import helmet from 'helmet';
 import mongoose from 'mongoose';
 import Routes from './routes';
 import { createRedisClient } from './services/RedisService';
-import { apiLimiter } from './middlewares/rateLimit';
 
 class ArticleServiceServer {
   public app: Application;
@@ -23,7 +22,8 @@ class ArticleServiceServer {
     this.app.use(helmet());
     this.app.use(express.json());
     this.app.use(cors({ origin, credentials: true }));
-    this.app.use(apiLimiter); // Apply global rate limiter
+    // Note: Rate limiting is now applied per-route instead of globally
+    // to avoid blocking dashboard statistics and read operations
   }
 
   private configureRoutes() {

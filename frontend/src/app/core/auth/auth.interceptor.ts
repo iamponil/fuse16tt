@@ -61,7 +61,7 @@ export const authInterceptor = (req: HttpRequest<unknown>, next: HttpHandlerFn):
                         // If refresh fails, sign out and reload
                         authService.signOut().subscribe();
                         location.reload();
-                        return throwError(refreshError);
+                        return throwError(() => refreshError);
                     })
                 );
             }

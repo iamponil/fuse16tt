@@ -77,7 +77,12 @@ class AuthController {
 
       return res.json({
         accessToken,
-        user: { id: user._id, email: user.email, role: user.role },
+        user: { 
+          id: user._id, 
+          name: user.name,
+          email: user.email, 
+          role: user.role 
+        },
       });
     } catch (err) {
       console.error(err);
@@ -124,7 +129,15 @@ class AuthController {
         domain: COOKIE_DOMAIN,
       });
 
-      return res.json({ accessToken });
+      return res.json({ 
+        accessToken,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ message: 'Server error' });
