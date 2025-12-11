@@ -16,9 +16,8 @@ import {
     TopContributor,
 } from './project.types';
 
-@Injectable({providedIn: 'root'})
-export class ProjectService
-{
+@Injectable({ providedIn: 'root' })
+export class ProjectService {
     private _data: BehaviorSubject<any> = new BehaviorSubject(null);
     
     // API Gateway base URL - all requests go through the gateway
@@ -29,9 +28,7 @@ export class ProjectService
     /**
      * Constructor
      */
-    constructor(private _httpClient: HttpClient)
-    {
-    }
+    constructor(private _httpClient: HttpClient) {}
 
     // -----------------------------------------------------------------------------------------------------
     // @ Accessors
@@ -40,8 +37,7 @@ export class ProjectService
     /**
      * Getter for data
      */
-    get data$(): Observable<any>
-    {
+    get data$(): Observable<any> {
         return this._data.asObservable();
     }
 
@@ -52,13 +48,11 @@ export class ProjectService
     /**
      * Get data - fetches from mock API (fallback)
      */
-    getData(): Observable<any>
-    {
+    getData(): Observable<any> {
         return this._httpClient.get('api/dashboards/project').pipe(
-            tap((response: any) =>
-            {
+            tap((response: any) => {
                 this._data.next(response);
-            }),
+            })
         );
     }
 
