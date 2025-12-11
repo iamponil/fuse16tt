@@ -2,11 +2,14 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { UserService } from 'app/core/user/user.service';
 import { User } from 'app/core/user/user.types';
 import { Observable } from 'rxjs';
+import { MatIconModule } from "@angular/material/icon";
 
 @Component({
     selector     : 'user-management',
     templateUrl  : './user-management.component.html',
-    encapsulation: ViewEncapsulation.None
+    encapsulation: ViewEncapsulation.None,
+    standalone   : true,
+    imports: [MatIconModule]
 })
 export class UserManagementComponent implements OnInit
 {
